@@ -33,6 +33,22 @@ test("Markdown tables escape pipes and backticks", () => {
   const markdown = formatReport(REPORT, "markdown");
   assert.match(markdown, /Use \\| pipes/u);
   assert.match(markdown, /bad\\\|name/u);
+  assert.doesNotMatch(markdown, /<img|<script|javascript:/u);
+  assert.match(markdown, /&lt;script&gt;/u);
+});
+
+test("Markdown output cannot break out of a table cell or code span", () => {
+  const report: ReportData = {
+    command: "index", title: "Unsafe", root: ".", summary: { resources: 1 },
+    resources: [{
+      id: "prompt:unsafe", name: "[click](javascript:alert(1))", kind: "prompt",
+      description: "</td></tr><script>alert(2)</script>", tags: ["` | injected"],
+      path: "` | </td><img src=x onerror=alert(3)>.prompt.md"
+    }]
+  };
+  const markdown = formatReport(report, "markdown");
+  assert.doesNotMatch(markdown, /<script|<img|<\/td>|\]\(javascript:/u);
+  assert.match(markdown, /\\\[click\\\]\\\(javascript:alert\\\(1\\\)\\\)/u);
 });
 
 test("empty search reports have useful empty states", () => {

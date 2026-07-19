@@ -2,6 +2,8 @@ const STOP_WORDS = new Set([
   "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "i", "in", "is", "it",
   "my", "of", "on", "or", "that", "the", "this", "to", "tool", "using", "want", "with"
 ]);
+const MAX_TOKENS_PER_VALUE = 8_192;
+const MAX_EXACT_TOKEN_CHARACTERS = 128;
 
 export function normalizeText(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US");
@@ -17,17 +19,20 @@ function stem(token: string): string {
 
 export function tokenize(value: string): string[] {
   const normalized = normalizeText(value);
-  const raw = normalized.match(/[\p{L}\p{N}]+/gu) ?? [];
   const output: string[] = [];
 
-  for (const valueToken of raw) {
+  for (const match of normalized.matchAll(/[\p{L}\p{N}]+/gu)) {
+    const valueToken = match[0];
     if (STOP_WORDS.has(valueToken)) continue;
     const token = stem(valueToken);
-    if (token.length > 1 || /^\d$/u.test(token)) output.push(token);
+    if ((token.length > 1 || /^\d$/u.test(token)) && token.length <= MAX_EXACT_TOKEN_CHARACTERS) output.push(token);
+    if (output.length >= MAX_TOKENS_PER_VALUE) break;
     if (/^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+$/u.test(token) && token.length > 2) {
-      const characters = [...token];
-      for (let index = 0; index < characters.length - 1; index += 1) {
-        output.push(`${characters[index] ?? ""}${characters[index + 1] ?? ""}`);
+      let previous = "";
+      for (const character of token) {
+        if (previous) output.push(`${previous}${character}`);
+        if (output.length >= MAX_TOKENS_PER_VALUE) break;
+        previous = character;
       }
     }
   }
@@ -49,7 +54,11 @@ export function escapeHtml(value: string): string {
 }
 
 export function escapeMarkdown(value: string): string {
-  return value.replaceAll("\\", "\\\\").replaceAll("|", "\\|").replaceAll("`", "\\`");
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replace(/([\\`*_[\]{}()#+.!|~-])/gu, "\\$1");
 }
 
 export function safeJson(value: unknown, indentation = 2): string {

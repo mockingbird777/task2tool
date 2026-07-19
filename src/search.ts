@@ -4,9 +4,11 @@ import { publicResource } from "./scanner.js";
 
 interface IndexedDocument {
   resource: ScannedResource;
-  terms: string[];
+  length: number;
   frequencies: Map<string, number>;
 }
+
+const MAX_QUERY_TERMS = 256;
 
 function weightedTerms(resource: ScannedResource): string[] {
   const name = tokenize(resource.name);
@@ -29,15 +31,15 @@ function frequencies(terms: readonly string[]): Map<string, number> {
 
 export function searchResources(resources: readonly ScannedResource[], query: string, limit = 10): SearchHit[] {
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new Error("Limit must be an integer between 1 and 100.");
-  const queryTerms = uniqueSorted(tokenize(query));
+  const queryTerms = uniqueSorted(tokenize(query)).slice(0, MAX_QUERY_TERMS);
   if (queryTerms.length === 0) throw new Error("Search query must contain at least one searchable word.");
   if (resources.length === 0) return [];
 
   const documents: IndexedDocument[] = resources.map((resource) => {
     const terms = weightedTerms(resource);
-    return { resource, terms, frequencies: frequencies(terms) };
+    return { resource, length: terms.length, frequencies: frequencies(terms) };
   });
-  const averageLength = documents.reduce((total, document) => total + document.terms.length, 0) / documents.length || 1;
+  const averageLength = documents.reduce((total, document) => total + document.length, 0) / documents.length || 1;
   const documentFrequency = new Map<string, number>();
   for (const term of queryTerms) {
     documentFrequency.set(term, documents.filter((document) => document.frequencies.has(term)).length);
@@ -57,7 +59,7 @@ export function searchResources(resources: readonly ScannedResource[], query: st
       matchedTerms.push(term);
       const frequency = documentFrequency.get(term) ?? 0;
       const inverseDocumentFrequency = Math.log(1 + (documents.length - frequency + 0.5) / (frequency + 0.5));
-      const normalization = termFrequency + k1 * (1 - b + b * document.terms.length / averageLength);
+      const normalization = termFrequency + k1 * (1 - b + b * document.length / averageLength);
       score += inverseDocumentFrequency * termFrequency * (k1 + 1) / normalization;
     }
     const title = normalizeText(document.resource.name);

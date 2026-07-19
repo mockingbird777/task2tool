@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { searchResources } from "../src/search.js";
+import { tokenize } from "../src/text.js";
 import type { ScannedResource } from "../src/types.js";
 
 const RESOURCES: ScannedResource[] = [
@@ -51,4 +52,16 @@ test("tokenizes CJK tasks for compact multilingual matching", () => {
     tags: ["审查"], path: "review.prompt.md", corpus: "代码审查 安全漏洞"
   }];
   assert.equal(searchResources(resources, "帮我进行代码审查")[0]?.resource.id, "prompt:zh");
+});
+
+test("keeps ranking bounded for pathologically long CJK input", () => {
+  const resources: ScannedResource[] = [{
+    id: "prompt:bounded", name: "安全助手", kind: "prompt", description: "检查风险。",
+    tags: [], path: "bounded.prompt.md", corpus: `安全${"文".repeat(100_000)}`
+  }];
+  const first = searchResources(resources, "安全检查");
+  const second = searchResources(resources, "安全检查");
+  assert.ok(tokenize(resources[0]!.corpus).length <= 8_192);
+  assert.deepEqual(first, second);
+  assert.equal(first[0]?.resource.id, "prompt:bounded");
 });

@@ -11,7 +11,8 @@ All notable changes to Task2Tool are documented here. The format follows [Keep a
 - Recursive discovery for skills, agent definitions, prompts, MCP configurations, and portable catalogs.
 - Deterministic BM25-inspired natural-language retrieval with CJK bigram support.
 - `index`, `find`, and `lint` commands with JSON, Markdown, and self-contained HTML output.
-- Secret-aware MCP metadata handling, bounded scanning, safe rendering, and atomic report writes.
+- Secret-aware MCP metadata handling, cumulative scan and token budgets, injection-safe rendering, and atomic report writes.
+- Verified npm-style binary symlink execution and packed-install smoke coverage.
 - Interactive static demo, versioned catalog schema, examples, automated tests, CI, and Pages deployment.
 
 [Unreleased]: https://github.com/mockingbird777/task2tool/compare/v0.1.0...HEAD

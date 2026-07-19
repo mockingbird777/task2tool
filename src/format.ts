@@ -28,7 +28,7 @@ function summaryMarkdown(summary: Readonly<Record<string, number | string>>): st
 function resourcesMarkdown(resources: readonly AgentResource[]): string {
   if (resources.length === 0) return "_No resources found._";
   const rows = resources.map((resource) =>
-    `| ${oneLine(resource.name)} | ${resource.kind} | ${oneLine(resource.description || "—")} | \`${oneLine(resource.path)}\` | ${resource.tags.map(oneLine).join(", ")} |`
+    `| ${oneLine(resource.name)} | ${resource.kind} | ${oneLine(resource.description || "—")} | ${oneLine(resource.path)} | ${resource.tags.map(oneLine).join(", ")} |`
   );
   return ["| Resource | Kind | Description | Source | Tags |", "| --- | --- | --- | --- | --- |", ...rows].join("\n");
 }
@@ -44,7 +44,7 @@ function hitsMarkdown(hits: readonly SearchHit[]): string {
 function issuesMarkdown(issues: readonly LintIssue[]): string {
   if (issues.length === 0) return "✅ No catalog issues found.";
   const rows = issues.map((issue) =>
-    `| ${issue.severity.toUpperCase()} | ${issue.code} | \`${oneLine(issue.path)}\` | ${oneLine(issue.message)} |`
+    `| ${issue.severity.toUpperCase()} | ${issue.code} | ${oneLine(issue.path)} | ${oneLine(issue.message)} |`
   );
   return ["| Severity | Code | Source | Message |", "| --- | --- | --- | --- |", ...rows].join("\n");
 }

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { runCli } from "../src/cli.js";
 
 function capture(): { stream: Writable; read: () => string } {
@@ -46,4 +48,15 @@ test("CLI exposes help and version without scanning", async () => {
   const version = capture();
   assert.equal(await runCli(["--version"], version.stream, errors.stream), 0);
   assert.equal(version.read(), "0.1.0\n");
+});
+
+test("CLI runs when invoked through an npm-style binary symlink", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "task2tool-bin-"));
+  t.after(async () => rm(root, { recursive: true, force: true }));
+  const link = join(root, "task2tool");
+  await symlink(fileURLToPath(new URL("../src/cli.js", import.meta.url)), link);
+
+  const result = spawnSync(process.execPath, [link, "--version"], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "0.1.0\n");
 });

@@ -28,12 +28,15 @@ test("recursively discovers supported Markdown resources in deterministic order"
 
 test("ignores node_modules, .git, dist, and symbolic links", async (t) => {
   const root = await workspace(t);
+  const outside = await workspace(t);
   for (const directory of ["node_modules", ".git", "dist"]) {
     await mkdir(join(root, directory));
     await writeFile(join(root, directory, `${directory.replace(".", "")}.prompt.md`), "# Ignore me\n\nNot a resource.\n");
   }
   await writeFile(join(root, "real.prompt.md"), "# Real\n\nA real prompt.\n");
+  await writeFile(join(outside, "outside.prompt.md"), "# Outside\n\nMust not cross the scan root.\n");
   await symlink(join(root, "real.prompt.md"), join(root, "linked.prompt.md"));
+  await symlink(outside, join(root, "linked-directory"));
   const scan = await scanWorkspace(root);
   assert.equal(scan.resources.length, 1);
   assert.equal(scan.resources[0]?.name, "Real");
@@ -68,6 +71,16 @@ test("accepts environment-variable references without a secret warning", async (
   assert.equal(scan.diagnostics.some((issue) => issue.code === "INLINE_SECRET"), false);
 });
 
+test("warns about non-string inline secrets without exporting their values", async (t) => {
+  const root = await workspace(t);
+  await writeFile(join(root, "mcp.json"), JSON.stringify({
+    mcpServers: { service: { command: "node", env: { API_KEY: 123456789 } } }
+  }));
+  const scan = await scanWorkspace(root);
+  assert.equal(scan.diagnostics.some((issue) => issue.code === "INLINE_SECRET"), true);
+  assert.doesNotMatch(JSON.stringify(publicResource(scan.resources[0]!)), /123456789/u);
+});
+
 test("reports malformed candidate catalogs but ignores unrelated malformed JSON", async (t) => {
   const root = await workspace(t);
   await writeFile(join(root, "catalog.json"), "{broken");
@@ -94,4 +107,46 @@ test("rejects a file as scan root", async (t) => {
   const file = join(root, "SKILL.md");
   await writeFile(file, "# Not a directory");
   await assert.rejects(scanWorkspace(file), /not a directory/u);
+});
+
+test("enforces aggregate input and corpus limits deterministically", async (t) => {
+  const root = await workspace(t);
+  const first = "# Alpha\n\n" + "security review ".repeat(20);
+  const second = "# Beta\n\n" + "incident response ".repeat(20);
+  await writeFile(join(root, "a.prompt.md"), first);
+  await writeFile(join(root, "b.prompt.md"), second);
+
+  const inputLimited = await scanWorkspace(root, { maxTotalInputBytes: Buffer.byteLength(first) });
+  assert.deepEqual(inputLimited.resources.map((resource) => resource.name), ["Alpha"]);
+  assert.equal(inputLimited.diagnostics.some((issue) => issue.code === "INPUT_LIMIT_REACHED"), true);
+
+  const corpusLimited = await scanWorkspace(root, { maxTotalCorpusCharacters: 64 });
+  assert.equal(corpusLimited.resources.length, 2);
+  assert.ok(corpusLimited.resources.reduce((total, resource) => total + resource.corpus.length, 0) <= 64);
+  assert.equal(corpusLimited.diagnostics.filter((issue) => issue.code === "CORPUS_LIMIT_REACHED").length, 1);
+});
+
+test("bounds entries, resources, and diagnostics from malformed catalogs", async (t) => {
+  const root = await workspace(t);
+  await writeFile(join(root, "catalog.json"), JSON.stringify({
+    catalogVersion: 1,
+    name: "Large",
+    resources: [
+      { id: "one", name: "One", kind: "prompt", description: "First" },
+      { id: "two", name: "Two", kind: "prompt", description: "Second" },
+      { id: "three", name: "Three", kind: "prompt", description: "Third" }
+    ]
+  }));
+  const entryLimited = await scanWorkspace(root, { maxEntriesPerDocument: 2 });
+  assert.equal(entryLimited.resources.length, 2);
+  assert.equal(entryLimited.diagnostics.some((issue) => issue.code === "ENTRY_LIMIT_REACHED"), true);
+
+  const resourceLimited = await scanWorkspace(root, { maxResources: 1 });
+  assert.equal(resourceLimited.resources.length, 1);
+  assert.equal(resourceLimited.diagnostics.some((issue) => issue.code === "RESOURCE_LIMIT_REACHED"), true);
+
+  await writeFile(join(root, "mcp.json"), JSON.stringify({ mcpServers: { a: 1, b: 2, c: 3 } }));
+  const diagnosticLimited = await scanWorkspace(root, { maxDiagnostics: 1 });
+  assert.equal(diagnosticLimited.diagnostics.some((issue) => issue.code === "DIAGNOSTICS_TRUNCATED"), true);
+  assert.ok(diagnosticLimited.diagnostics.length <= 2);
 });

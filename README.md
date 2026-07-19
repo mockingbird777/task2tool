@@ -115,6 +115,8 @@ Task2Tool extracts a fallback name and description from headings and prose when 
 
 Directories commonly containing generated or private implementation state are skipped: `.git`, `node_modules`, `dist`, `coverage`, and `.task2tool`. Symbolic links are not followed. Files larger than 1 MiB are skipped and linted when they look like a supported resource.
 
+Every scan also has cumulative safety budgets: 20,000 visited files, 20,000 resources, 64 MiB of parsed input, 16 MiB of retained search text, 5,000 entries per JSON document, and 1,000 detailed diagnostics. Reaching a budget produces a deterministic lint warning instead of allowing an unbounded index to grow in memory.
+
 ## Portable catalog format
 
 The ARD-inspired catalog is deliberately small. It describes capabilities without prescribing how an agent runtime installs or invokes them:
@@ -156,7 +158,7 @@ This makes results fast, offline, explainable, and reproducible. It will not und
 
 - Reports never include MCP argument arrays or environment values. Only safe discovery metadata such as name, description, command, and transport is exported.
 - `lint` warns when secret-like MCP environment keys contain inline values instead of `${ENVIRONMENT_VARIABLE}` references.
-- HTML and Markdown output escape untrusted catalog fields. JSON output neutralizes HTML-significant characters.
+- HTML and Markdown output neutralize untrusted HTML, links, table delimiters, and formatting controls. JSON output neutralizes HTML-significant characters.
 - HTML reports include a restrictive content-security policy and require no network access.
 - The scanner does not follow symbolic links and caps both file count and input size.
 
@@ -191,7 +193,7 @@ npm run build
 npm audit
 ```
 
-The project targets strict TypeScript and Node.js 20+, has zero runtime dependencies, and tests scanning boundaries, deterministic ranking, multilingual tokenization, output escaping, lint behavior, and real CLI flows.
+The project targets strict TypeScript and Node.js 20+, has zero runtime dependencies, and tests scanning boundaries, deterministic ranking, multilingual tokenization, output escaping, lint behavior, npm-style binary symlinks, and packed CLI flows.
 
 Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), use the issue templates for scoped proposals, and keep new integrations local-first.
 

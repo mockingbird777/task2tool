@@ -23,6 +23,6 @@ You should receive an initial response within seven days. Please allow reasonabl
 
 ## Security boundaries
 
-Task2Tool treats filenames, Markdown, JSON, catalog metadata, and MCP configuration as untrusted input. Reports escape these values, scanning is bounded, and symbolic links are ignored. MCP argument arrays and environment values are not exported.
+Task2Tool treats filenames, Markdown, JSON, catalog metadata, and MCP configuration as untrusted input. Reports escape these values, per-file and aggregate scan budgets bound retained data, tokenization is capped, and symbolic links are ignored. MCP argument arrays and environment values are not exported.
 
 The CLI still reads text below the root explicitly selected by the user. Do not scan untrusted directories with privileges you would not grant to an ordinary local process. Generated reports can reveal filenames and descriptions; review them before publishing.

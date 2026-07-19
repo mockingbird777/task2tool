@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
 import { rename, unlink, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -187,6 +188,17 @@ export async function runCli(
 }
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : "";
-if (invokedPath && invokedPath === fileURLToPath(import.meta.url)) {
+const modulePath = fileURLToPath(import.meta.url);
+
+function sameExecutable(left: string, right: string): boolean {
+  if (!left) return false;
+  try {
+    return realpathSync(left) === realpathSync(right);
+  } catch {
+    return left === right;
+  }
+}
+
+if (sameExecutable(invokedPath, modulePath)) {
   process.exitCode = await runCli(process.argv.slice(2));
 }

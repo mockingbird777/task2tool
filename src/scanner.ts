@@ -8,6 +8,32 @@ const IGNORED_DIRECTORIES = new Set([".git", "node_modules", "dist", "coverage",
 const MAX_FILES = 20_000;
 const MAX_FILE_BYTES = 1_048_576;
 const MAX_CORPUS_CHARACTERS = 65_536;
+const MAX_TOTAL_INPUT_BYTES = 67_108_864;
+const MAX_TOTAL_CORPUS_CHARACTERS = 16_777_216;
+const MAX_RESOURCES = 20_000;
+const MAX_ENTRIES_PER_DOCUMENT = 5_000;
+const MAX_DIAGNOSTICS = 1_000;
+const MAX_LIST_ITEMS = 256;
+
+export interface ScanLimits {
+  maxFiles: number;
+  maxFileBytes: number;
+  maxTotalInputBytes: number;
+  maxTotalCorpusCharacters: number;
+  maxResources: number;
+  maxEntriesPerDocument: number;
+  maxDiagnostics: number;
+}
+
+const DEFAULT_LIMITS: ScanLimits = {
+  maxFiles: MAX_FILES,
+  maxFileBytes: MAX_FILE_BYTES,
+  maxTotalInputBytes: MAX_TOTAL_INPUT_BYTES,
+  maxTotalCorpusCharacters: MAX_TOTAL_CORPUS_CHARACTERS,
+  maxResources: MAX_RESOURCES,
+  maxEntriesPerDocument: MAX_ENTRIES_PER_DOCUMENT,
+  maxDiagnostics: MAX_DIAGNOSTICS
+};
 
 interface MarkdownMetadata {
   name?: string;
@@ -31,11 +57,11 @@ function cleanString(value: unknown): string | undefined {
 
 function stringList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return uniqueSorted(value.flatMap((item) => typeof item === "string" ? [item] : []));
+    return uniqueSorted(value.slice(0, MAX_LIST_ITEMS).flatMap((item) => typeof item === "string" ? [item] : []));
   }
   if (typeof value !== "string") return [];
   const unwrapped = value.trim().replace(/^\[/u, "").replace(/\]$/u, "");
-  return uniqueSorted(unwrapped.split(",").map((item) => item.trim().replace(/^['"]|['"]$/gu, "")));
+  return uniqueSorted(unwrapped.split(",", MAX_LIST_ITEMS).map((item) => item.trim().replace(/^['"]|['"]$/gu, "")));
 }
 
 function parseFrontmatter(content: string): { metadata: MarkdownMetadata; body: string } {
@@ -61,12 +87,12 @@ function parseFrontmatter(content: string): { metadata: MarkdownMetadata; body: 
 
 function markdownSummary(body: string): { heading?: string; description?: string; headings: string[] } {
   const lines = body.split("\n");
-  const headings = lines
-    .flatMap((line) => {
-      const match = /^#{1,3}\s+(.+?)\s*#*$/u.exec(line.trim());
-      return match?.[1] ? [match[1].trim()] : [];
-    })
-    .slice(0, 12);
+  const headings: string[] = [];
+  for (const line of lines) {
+    const match = /^#{1,3}\s+(.+?)\s*#*$/u.exec(line.trim());
+    if (match?.[1]) headings.push(match[1].trim());
+    if (headings.length >= 12) break;
+  }
   const heading = headings[0];
   const paragraph: string[] = [];
   let inCode = false;
@@ -129,15 +155,26 @@ function candidateJson(fileName: string): boolean {
     || lower === "task2tool.json" || lower === "catalog.json" || lower.endsWith(".catalog.json");
 }
 
-function mcpResources(value: Record<string, unknown>, resourcePath: string, diagnostics: LintIssue[]): ScannedResource[] {
+type AddDiagnostic = (issue: LintIssue) => void;
+
+function mcpResources(
+  value: Record<string, unknown>,
+  resourcePath: string,
+  addDiagnostic: AddDiagnostic,
+  maxEntries: number
+): ScannedResource[] {
   const rawServers = value["mcpServers"];
   if (!recordValue(rawServers)) return [];
   const resources: ScannedResource[] = [];
+  const serverNames = Object.keys(rawServers).sort();
+  if (serverNames.length > maxEntries) {
+    addDiagnostic({ severity: "warning", code: "ENTRY_LIMIT_REACHED", message: `MCP configuration exceeds the ${maxEntries} entry processing limit.`, path: resourcePath });
+  }
 
-  for (const serverName of Object.keys(rawServers).sort()) {
+  for (const serverName of serverNames.slice(0, maxEntries)) {
     const rawServer = rawServers[serverName];
     if (!recordValue(rawServer)) {
-      diagnostics.push({ severity: "error", code: "INVALID_MCP_SERVER", message: `MCP server '${serverName}' must be an object.`, path: resourcePath });
+      addDiagnostic({ severity: "error", code: "INVALID_MCP_SERVER", message: `MCP server '${serverName}' must be an object.`, path: resourcePath });
       continue;
     }
     const description = cleanString(rawServer["description"]) ?? `MCP server configuration for ${serverName}.`;
@@ -148,15 +185,17 @@ function mcpResources(value: Record<string, unknown>, resourcePath: string, diag
     if (command) details["command"] = command;
     if (transport) details["transport"] = transport;
     if (!command && !transport && typeof rawServer["url"] !== "string") {
-      diagnostics.push({ severity: "warning", code: "MCP_LAUNCH_MISSING", message: `MCP server '${serverName}' has no command, transport, or URL.`, path: resourcePath });
+      addDiagnostic({ severity: "warning", code: "MCP_LAUNCH_MISSING", message: `MCP server '${serverName}' has no command, transport, or URL.`, path: resourcePath });
     }
 
     const environment = rawServer["env"];
     if (recordValue(environment)) {
       for (const [key, secretValue] of Object.entries(environment)) {
-        if (!/(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL)/iu.test(key) || typeof secretValue !== "string") continue;
-        if (secretValue && !/^\$\{[^}]+\}$/u.test(secretValue) && !/^\$[A-Z_][A-Z0-9_]*$/u.test(secretValue)) {
-          diagnostics.push({
+        if (!/(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL)/iu.test(key) || secretValue === "") continue;
+        const isReference = typeof secretValue === "string"
+          && (/^\$\{[^}]+\}$/u.test(secretValue) || /^\$[A-Z_][A-Z0-9_]*$/u.test(secretValue));
+        if (!isReference) {
+          addDiagnostic({
             severity: "warning",
             code: "INLINE_SECRET",
             message: `Environment value '${key}' for '${serverName}' looks inline; reference an environment variable instead.`,
@@ -185,16 +224,24 @@ function asResourceKind(value: unknown): ResourceKind {
   return typeof value === "string" && (RESOURCE_KINDS as readonly string[]).includes(value) ? value as ResourceKind : "catalog";
 }
 
-function catalogResources(value: Record<string, unknown>, resourcePath: string, diagnostics: LintIssue[]): ScannedResource[] {
+function catalogResources(
+  value: Record<string, unknown>,
+  resourcePath: string,
+  addDiagnostic: AddDiagnostic,
+  maxEntries: number
+): ScannedResource[] {
   const rawResources = value["resources"];
   const looksLikeCatalog = Array.isArray(rawResources)
     && (value["$schema"] === "https://raw.githubusercontent.com/mockingbird777/task2tool/main/schema/catalog-v1.schema.json" || value["catalogVersion"] !== undefined || value["name"] !== undefined);
   if (!looksLikeCatalog || !Array.isArray(rawResources)) return [];
   const resources: ScannedResource[] = [];
+  if (rawResources.length > maxEntries) {
+    addDiagnostic({ severity: "warning", code: "ENTRY_LIMIT_REACHED", message: `Catalog exceeds the ${maxEntries} entry processing limit.`, path: resourcePath });
+  }
 
-  for (const [index, rawResource] of rawResources.entries()) {
+  for (const [index, rawResource] of rawResources.slice(0, maxEntries).entries()) {
     if (!recordValue(rawResource)) {
-      diagnostics.push({ severity: "error", code: "INVALID_CATALOG_ENTRY", message: `Catalog entry ${index} must be an object.`, path: resourcePath });
+      addDiagnostic({ severity: "error", code: "INVALID_CATALOG_ENTRY", message: `Catalog entry ${index} must be an object.`, path: resourcePath });
       continue;
     }
     const name = cleanString(rawResource["name"]) ?? "";
@@ -204,8 +251,8 @@ function catalogResources(value: Record<string, unknown>, resourcePath: string, 
     const explicitId = cleanString(rawResource["id"]);
     const id = explicitId ? `catalog:${slug(explicitId)}` : `${kind}:${resourcePath.toLocaleLowerCase("en-US")}#${slug(name || String(index))}`;
     const locator = cleanString(rawResource["path"]) ?? cleanString(rawResource["url"]);
-    if (!name) diagnostics.push({ severity: "error", code: "NAME_MISSING", message: `Catalog entry ${index} has no name.`, path: resourcePath, resourceId: id });
-    if (!description) diagnostics.push({ severity: "warning", code: "DESCRIPTION_MISSING", message: `Catalog entry '${name || index}' has no description.`, path: resourcePath, resourceId: id });
+    if (!name) addDiagnostic({ severity: "error", code: "NAME_MISSING", message: `Catalog entry ${index} has no name.`, path: resourcePath, resourceId: id });
+    if (!description) addDiagnostic({ severity: "warning", code: "DESCRIPTION_MISSING", message: `Catalog entry '${name || index}' has no description.`, path: resourcePath, resourceId: id });
     resources.push({
       id,
       name: name || `Entry ${index + 1}`,
@@ -220,19 +267,61 @@ function catalogResources(value: Record<string, unknown>, resourcePath: string, 
   return resources;
 }
 
-export async function scanWorkspace(rootInput: string): Promise<ScanResult> {
+export async function scanWorkspace(rootInput: string, limitOverrides: Partial<ScanLimits> = {}): Promise<ScanResult> {
+  const limits = { ...DEFAULT_LIMITS, ...limitOverrides };
+  for (const [name, value] of Object.entries(limits)) {
+    if (!Number.isSafeInteger(value) || value < 1) throw new Error(`Scan limit '${name}' must be a positive safe integer.`);
+  }
   const root = resolve(rootInput);
   const rootStat = await lstat(root);
   if (!rootStat.isDirectory()) throw new Error(`Scan root is not a directory: ${rootInput}`);
   const resources: ScannedResource[] = [];
   const diagnostics: LintIssue[] = [];
   let filesVisited = 0;
+  let totalInputBytes = 0;
+  let totalCorpusCharacters = 0;
+  let halted = false;
+  let corpusLimitReported = false;
+
+  const addDiagnostic: AddDiagnostic = (issue) => {
+    if (diagnostics.length < limits.maxDiagnostics) {
+      diagnostics.push(issue);
+      return;
+    }
+    if (!diagnostics.some((diagnostic) => diagnostic.code === "DIAGNOSTICS_TRUNCATED")) {
+      diagnostics.push({ severity: "warning", code: "DIAGNOSTICS_TRUNCATED", message: `Diagnostics exceed the ${limits.maxDiagnostics} issue reporting limit.`, path: "." });
+    }
+  };
+
+  function appendResources(discovered: readonly ScannedResource[]): void {
+    for (const discoveredResource of discovered) {
+      if (resources.length >= limits.maxResources) {
+        addDiagnostic({ severity: "warning", code: "RESOURCE_LIMIT_REACHED", message: `Scan exceeds the ${limits.maxResources} resource limit.`, path: discoveredResource.path });
+        halted = true;
+        return;
+      }
+      const remainingCorpus = Math.max(0, limits.maxTotalCorpusCharacters - totalCorpusCharacters);
+      const corpus = discoveredResource.corpus.slice(0, remainingCorpus);
+      if (corpus.length < discoveredResource.corpus.length && !corpusLimitReported) {
+        addDiagnostic({ severity: "warning", code: "CORPUS_LIMIT_REACHED", message: `Search text exceeds the ${limits.maxTotalCorpusCharacters} character aggregate limit; later resource metadata remains indexed.`, path: discoveredResource.path });
+        corpusLimitReported = true;
+      }
+      totalCorpusCharacters += corpus.length;
+      resources.push(corpus === discoveredResource.corpus ? discoveredResource : { ...discoveredResource, corpus });
+    }
+  }
 
   async function visit(directory: string): Promise<void> {
+    if (halted) return;
     const entries = await readdir(directory, { withFileTypes: true });
     entries.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
     for (const entry of entries) {
-      if (filesVisited >= MAX_FILES) return;
+      if (halted) return;
+      if (filesVisited >= limits.maxFiles) {
+        addDiagnostic({ severity: "warning", code: "FILE_LIMIT_REACHED", message: `Scan exceeds the ${limits.maxFiles} file traversal limit.`, path: toPosix(relative(root, directory)) || "." });
+        halted = true;
+        return;
+      }
       const absolutePath = resolve(directory, entry.name);
       if (entry.isSymbolicLink()) continue;
       if (entry.isDirectory()) {
@@ -246,27 +335,33 @@ export async function scanWorkspace(rootInput: string): Promise<ScanResult> {
       const isJson = extname(entry.name).toLocaleLowerCase("en-US") === ".json";
       if (!kind && !isJson) continue;
       const fileStat = await lstat(absolutePath);
-      if (fileStat.size > MAX_FILE_BYTES) {
-        if (kind || candidateJson(entry.name)) diagnostics.push({ severity: "warning", code: "FILE_TOO_LARGE", message: `File exceeds the ${MAX_FILE_BYTES} byte scan limit.`, path: resourcePath });
+      if (fileStat.size > limits.maxFileBytes) {
+        if (kind || candidateJson(entry.name)) addDiagnostic({ severity: "warning", code: "FILE_TOO_LARGE", message: `File exceeds the ${limits.maxFileBytes} byte scan limit.`, path: resourcePath });
         continue;
       }
+      if (totalInputBytes + fileStat.size > limits.maxTotalInputBytes) {
+        addDiagnostic({ severity: "warning", code: "INPUT_LIMIT_REACHED", message: `Scan exceeds the ${limits.maxTotalInputBytes} byte aggregate input limit.`, path: resourcePath });
+        halted = true;
+        return;
+      }
+      totalInputBytes += fileStat.size;
       const content = await readFile(absolutePath, "utf8");
       if (kind) {
         const resource = markdownResource(content, resourcePath, kind);
-        if (!resource.description) diagnostics.push({ severity: "warning", code: "DESCRIPTION_MISSING", message: `Resource '${resource.name}' has no description.`, path: resourcePath, resourceId: resource.id });
-        resources.push(resource);
+        if (!resource.description) addDiagnostic({ severity: "warning", code: "DESCRIPTION_MISSING", message: `Resource '${resource.name}' has no description.`, path: resourcePath, resourceId: resource.id });
+        appendResources([resource]);
         continue;
       }
       let parsed: unknown;
       try {
         parsed = JSON.parse(content) as unknown;
       } catch {
-        if (candidateJson(entry.name)) diagnostics.push({ severity: "error", code: "INVALID_JSON", message: "Candidate catalog or MCP configuration is not valid JSON.", path: resourcePath });
+        if (candidateJson(entry.name)) addDiagnostic({ severity: "error", code: "INVALID_JSON", message: "Candidate catalog or MCP configuration is not valid JSON.", path: resourcePath });
         continue;
       }
       if (!recordValue(parsed)) continue;
-      resources.push(...mcpResources(parsed, resourcePath, diagnostics));
-      resources.push(...catalogResources(parsed, resourcePath, diagnostics));
+      appendResources(mcpResources(parsed, resourcePath, addDiagnostic, limits.maxEntriesPerDocument));
+      if (!halted) appendResources(catalogResources(parsed, resourcePath, addDiagnostic, limits.maxEntriesPerDocument));
     }
   }
 
