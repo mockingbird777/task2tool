@@ -1,0 +1,43 @@
+name: Bug report
+description: Report a reproducible problem in scanning, ranking, linting, or output.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for providing a small, sanitized reproduction. Never paste real credentials or private catalog content."
+  - type: input
+    id: version
+    attributes:
+      label: Task2Tool and Node versions
+      description: Output of `task2tool --version` and `node --version`.
+      placeholder: "Task2Tool 0.1.0; Node v20.x"
+    validations:
+      required: true
+  - type: dropdown
+    id: command
+    attributes:
+      label: Command
+      options: [index, find, lint, install or build]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the command and a sanitized minimal directory or catalog.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed tokens, credentials, private paths, and sensitive content.
+          required: true

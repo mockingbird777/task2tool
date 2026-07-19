@@ -1,0 +1,50 @@
+{
+  "name": "task2tool",
+  "version": "0.1.0",
+  "description": "Local-first discovery for AI agent skills, prompts, MCP servers, and catalogs.",
+  "type": "module",
+  "bin": {
+    "task2tool": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "examples",
+    "schema",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prepare": "npm run build",
+    "pretest": "npm run clean && npm run build",
+    "test": "node --test --test-reporter=spec dist/test/*.test.js",
+    "check": "npm run clean && npm run build && npm test"
+  },
+  "keywords": [
+    "ai-agents",
+    "mcp",
+    "prompts",
+    "skills",
+    "cli",
+    "local-first",
+    "tool-discovery"
+  ],
+  "author": "mockingbird777",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mockingbird777/task2tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mockingbird777/task2tool/issues"
+  },
+  "homepage": "https://mockingbird777.github.io/task2tool/",
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  }
+}

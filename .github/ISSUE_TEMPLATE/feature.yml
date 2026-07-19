@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a focused capability or format improvement.
+title: "feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: User workflow
+      description: What task is difficult today, and who encounters it?
+    validations:
+      required: true
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Minimal input and desired output
+      description: Show a small sanitized fixture and the behavior you expect.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Local-first and safety considerations
+      description: Explain network, privacy, determinism, and runtime-dependency tradeoffs.
+    validations:
+      required: true

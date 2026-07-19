@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mockingbird777/task2tool/main/schema/catalog-v1.schema.json",
+  "title": "Task2Tool Catalog",
+  "description": "A small, portable catalog of agent capabilities.",
+  "type": "object",
+  "required": ["catalogVersion", "name", "resources"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "catalogVersion": { "const": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "description"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["skill", "agent", "prompt", "mcp-server", "catalog"] },
+          "description": { "type": "string", "minLength": 1 },
+          "tags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "path": { "type": "string" },
+          "url": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

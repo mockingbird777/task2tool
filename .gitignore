@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+.task2tool/
+task2tool-report.html
+task2tool-index.json

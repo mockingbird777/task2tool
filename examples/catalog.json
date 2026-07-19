@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/mockingbird777/task2tool/main/schema/catalog-v1.schema.json",
+  "catalogVersion": 1,
+  "name": "Task2Tool starter catalog",
+  "resources": [
+    {
+      "id": "dependency-upgrade-planner",
+      "name": "Dependency Upgrade Planner",
+      "kind": "skill",
+      "description": "Plans safe dependency upgrades from release notes, migration guides, and compatibility constraints.",
+      "tags": ["dependencies", "maintenance", "migration"],
+      "capabilities": ["compare changelogs", "identify breaking changes", "suggest upgrade tests"]
+    },
+    {
+      "id": "incident-brief",
+      "name": "Incident Brief Writer",
+      "kind": "prompt",
+      "description": "Turns a timeline and raw operational notes into a concise, blameless incident brief.",
+      "tags": ["sre", "incident-response", "writing"],
+      "capabilities": ["summarize timelines", "extract follow-ups", "write postmortems"]
+    },
+    {
+      "id": "research-router",
+      "name": "Research Source Router",
+      "kind": "agent",
+      "description": "Chooses primary sources, records provenance, and returns a compact evidence packet for another agent.",
+      "tags": ["research", "citations", "routing"],
+      "capabilities": ["source selection", "citation capture", "evidence synthesis"]
+    }
+  ]
+}

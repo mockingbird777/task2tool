@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/mockingbird777/task2tool/security/advisories/new
+    about: Report exploitable behavior privately.
+  - name: Usage question or idea
+    url: https://github.com/mockingbird777/task2tool/discussions
+    about: Ask questions and compare workflows in Discussions.

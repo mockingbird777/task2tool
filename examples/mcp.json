@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "workspace-files": {
+      "description": "Read and search files inside a deliberately scoped workspace directory.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./workspace"],
+      "tags": ["filesystem", "local"]
+    },
+    "github": {
+      "description": "Inspect repositories, pull requests, and issues with a token supplied at runtime.",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "tags": ["git", "pull-requests"]
+    }
+  }
+}

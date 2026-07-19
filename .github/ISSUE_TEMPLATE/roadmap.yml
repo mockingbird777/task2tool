@@ -1,0 +1,37 @@
+name: Roadmap proposal
+description: Propose and scope a candidate roadmap item with measurable value.
+title: "roadmap: "
+labels: [roadmap]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: Describe the user-visible result, not an implementation preference.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and representative fixture
+      description: Link related standards or provide a sanitized real-world shape.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: Success criteria
+      description: What tests or measurements would prove this is complete?
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Project principles
+      options:
+        - label: The core workflow remains usable offline.
+          required: true
+        - label: The proposal preserves deterministic output or documents why it cannot.
+          required: true
+        - label: Sensitive input is not added to exported reports.
+          required: true
