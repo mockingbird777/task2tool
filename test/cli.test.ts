@@ -47,7 +47,22 @@ test("CLI exposes help and version without scanning", async () => {
   assert.match(help.read(), /task2tool find/u);
   const version = capture();
   assert.equal(await runCli(["--version"], version.stream, errors.stream), 0);
-  assert.equal(version.read(), "0.1.0\n");
+  assert.equal(version.read(), "0.2.0\n");
+});
+
+test("CLI demo finds useful bundled examples without setup", async () => {
+  const output = capture();
+  const errors = capture();
+  assert.equal(await runCli(["demo", "--format", "json"], output.stream, errors.stream), 0, errors.read());
+  const result = JSON.parse(output.read()) as {
+    query: string;
+    summary: { matches: number; scannedResources: number };
+    hits: Array<{ resource: { name: string } }>;
+  };
+  assert.equal(result.query, "review a pull request for security and reliability bugs");
+  assert.ok(result.summary.scannedResources >= 5);
+  assert.ok(result.summary.matches >= 1);
+  assert.equal(result.hits[0]?.resource.name, "Pull Request Risk Reviewer");
 });
 
 test("CLI runs when invoked through an npm-style binary symlink", async (t) => {
@@ -58,5 +73,5 @@ test("CLI runs when invoked through an npm-style binary symlink", async (t) => {
 
   const result = spawnSync(process.execPath, [link, "--version"], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout, "0.1.0\n");
+  assert.equal(result.stdout, "0.2.0\n");
 });

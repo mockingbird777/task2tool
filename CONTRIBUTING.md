@@ -21,6 +21,17 @@ npm audit
 
 There are no runtime dependencies. Please discuss any proposal that adds one before implementing it.
 
+## Good first contributions
+
+You do not need to design a new retrieval engine to make a useful contribution. High-signal starting points are:
+
+- Add a small, non-sensitive fixture for a real `SKILL.md`, agent, prompt, MCP, or catalog layout that the scanner does not yet recognize.
+- Add a natural-language query where the current ranking is surprising, together with the result you expected and why.
+- Improve one lint diagnostic so it explains both the problem and the smallest safe fix.
+- Document a runtime-neutral integration recipe that consumes the JSON output.
+
+Open the closest [issue template](https://github.com/mockingbird777/task2tool/issues/new/choose) before a larger change so the fixture and success criterion can be agreed first.
+
 ## Design constraints
 
 Changes should preserve these properties:

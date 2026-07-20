@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-labelledby="title desc">
+  <title id="title">Task2Tool</title>
+  <desc id="desc">Find the few AI agent capabilities that fit the task</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#06100c"/><stop offset="0.55" stop-color="#0b2117"/><stop offset="1" stop-color="#081714"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#b6ff78"/><stop offset="1" stop-color="#5cf2bd"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop stop-color="#37d987" stop-opacity=".34"/><stop offset="1" stop-color="#37d987" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M38 0H0V38" fill="none" stroke="#b6ff78" stroke-opacity=".055"/></pattern>
+  </defs>
+  <rect width="1280" height="440" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="440" rx="28" fill="url(#grid)"/>
+  <circle cx="216" cy="220" r="250" fill="url(#glow)"/>
+  <g transform="translate(92 74)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="0" y="18" width="90" height="62" rx="14" fill="#10291d" stroke="#39654d" stroke-width="3"/>
+    <rect x="0" y="114" width="90" height="62" rx="14" fill="#10291d" stroke="#39654d" stroke-width="3"/>
+    <rect x="0" y="210" width="90" height="62" rx="14" fill="#10291d" stroke="#39654d" stroke-width="3"/>
+    <path d="M90 49h52m-52 96h52m-52 96h52" stroke="#39654d" stroke-width="4"/>
+    <path d="M142 49 214 145 142 241" stroke="url(#beam)" stroke-width="9"/>
+    <rect x="214" y="104" width="108" height="82" rx="18" fill="#142f22" stroke="#b6ff78" stroke-width="4"/>
+    <path d="m245 145 20 20 34-43" stroke="url(#beam)" stroke-width="11"/>
+    <circle cx="45" cy="49" r="9" fill="#5cf2bd" stroke="none"/><circle cx="45" cy="145" r="9" fill="#80dba5" stroke="none"/><circle cx="45" cy="241" r="9" fill="#80dba5" stroke="none"/>
+  </g>
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <text x="465" y="166" fill="#f0fff5" font-size="78" font-weight="850" letter-spacing="-4">Task2Tool</text>
+    <text x="470" y="218" fill="#b6ff78" font-size="22" font-weight="750" letter-spacing="2.4">LOCAL AI CAPABILITY DISCOVERY</text>
+    <text x="470" y="278" fill="#b4c9bc" font-size="25">Ask for a task. Find the few resources that fit.</text>
+    <g transform="translate(470 321)">
+      <rect width="120" height="40" rx="20" fill="#b6ff78" fill-opacity=".12" stroke="#b6ff78" stroke-opacity=".48"/><text x="60" y="26" fill="#dfffc7" font-size="13" text-anchor="middle" font-weight="750">ZERO CLOUD</text>
+      <rect x="134" width="154" height="40" rx="20" fill="#5cf2bd" fill-opacity=".1" stroke="#5cf2bd" stroke-opacity=".42"/><text x="211" y="26" fill="#c3ffeb" font-size="13" text-anchor="middle" font-weight="750">DETERMINISTIC</text>
+      <rect x="302" width="177" height="40" rx="20" fill="#5cf2bd" fill-opacity=".1" stroke="#5cf2bd" stroke-opacity=".42"/><text x="390" y="26" fill="#c3ffeb" font-size="13" text-anchor="middle" font-weight="750">0 DEPENDENCIES</text>
+    </g>
+  </g>
+</svg>

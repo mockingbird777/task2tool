@@ -1,37 +1,82 @@
-# Task2Tool
+<p align="center">
+  <img src="assets/banner.svg" alt="Task2Tool — local AI capability discovery" width="100%" />
+</p>
 
-[![CI](https://github.com/mockingbird777/task2tool/actions/workflows/ci.yml/badge.svg)](https://github.com/mockingbird777/task2tool/actions/workflows/ci.yml)
-[![Pages](https://github.com/mockingbird777/task2tool/actions/workflows/pages.yml/badge.svg)](https://mockingbird777.github.io/task2tool/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-b6ff78.svg)](LICENSE)
-[![Node 20+](https://img.shields.io/badge/node-%3E%3D20-5cf2bd.svg)](package.json)
+<p align="center">
+  <a href="https://github.com/mockingbird777/task2tool/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mockingbird777/task2tool/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://mockingbird777.github.io/task2tool/"><img alt="Interactive demo" src="https://img.shields.io/badge/demo-live-b6ff78?style=flat-square"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-5cf2bd?style=flat-square"></a>
+  <img alt="Zero runtime dependencies" src="https://img.shields.io/badge/runtime_dependencies-0-5cf2bd?style=flat-square">
+  <img alt="Node 20+" src="https://img.shields.io/badge/node-%E2%89%A520-438a68?style=flat-square">
+</p>
 
-**Turn a natural-language task into the shortest useful list of local AI-agent capabilities.**
+<p align="center">
+  <strong>Ask for a task. Find the few local AI capabilities that fit—without sending your catalog to a cloud service.</strong>
+</p>
 
-Task2Tool recursively discovers `SKILL.md`, `*.agent.md`, `*.prompt.md`, MCP server configurations, and portable catalog JSON. Its deterministic BM25-inspired ranker helps an agent select a few relevant resources instead of placing an entire tool registry in the context window.
+<p align="center">
+  <a href="https://mockingbird777.github.io/task2tool/"><strong>Try the search lab</strong></a> ·
+  <a href="#60-second-demo">Run the CLI demo</a> ·
+  <a href="ROADMAP.md">Roadmap</a> ·
+  <a href="https://github.com/mockingbird777/task2tool/issues/new/choose">Suggest a resource format</a>
+</p>
 
-[Try the interactive demo](https://mockingbird777.github.io/task2tool/) · [Read the roadmap](ROADMAP.md) · [Report a problem](https://github.com/mockingbird777/task2tool/issues/new/choose)
+Task2Tool discovers `SKILL.md`, agents, prompts, MCP server configurations, and portable catalog JSON. A deterministic BM25-inspired ranker turns natural-language work into a short, explainable candidate list that any agent runtime can consume.
 
 > Local-first means local: no account, hosted index, API key, telemetry, or runtime dependency.
 
-## Why this exists
+## 60-second demo
 
-Agent ecosystems are getting composable—and crowded. MCP servers, reusable skills, subagents, and prompt libraries are useful, but advertising every capability on every turn consumes context and makes tool choice noisy. Task2Tool adds a tiny retrieval layer:
+Node.js 20+ is the only requirement. This command downloads the current GitHub source and searches the realistic examples bundled with it:
+
+```bash
+npx --yes github:mockingbird777/task2tool demo
+```
+
+Abridged output:
+
+```text
+# Task2Tool demo: relevant capabilities
+
+| Metric | Value |
+| --- | ---: |
+| matches | 2 |
+| scannedResources | 8 |
+
+## Best matches
+
+| # | Resource | Kind | Score |
+| ---: | --- | --- | ---: |
+| 1 | Pull Request Risk Reviewer | skill | 14.273 |
+| 2 | github | mcp-server | 5.403 |
+```
+
+Try a different task—still with no files to prepare:
+
+```bash
+npx --yes github:mockingbird777/task2tool demo "write a blameless incident summary"
+```
+
+## The problem it solves
+
+Agent ecosystems are getting composable—and crowded. Advertising every skill, subagent, prompt, and MCP server on every turn consumes context and makes tool choice noisy. Task2Tool adds a small retrieval layer:
 
 ```text
 natural-language task → local scan → weighted lexical index → top-k capabilities
 ```
 
-It is intentionally not an agent framework. It finds candidates; your runtime decides what to load or invoke.
+It is intentionally **not** an agent framework: Task2Tool finds candidates; your runtime decides what to load or invoke.
+
+| Instead of | Task2Tool gives you |
+| --- | --- |
+| Loading an entire tool registry | A ranked top-k with scores and matched terms |
+| Grepping filenames | Weighted search across names, tags, descriptions, headings, and content |
+| Running a hosted vector database | Offline, reproducible lexical retrieval with no model or API key |
+| Adopting another agent runtime | Portable JSON, Markdown, or HTML that fits the runtime you already use |
 
 ## Quick start
 
-Run directly from GitHub with Node.js 20 or newer:
-
-```bash
-npx --yes github:mockingbird777/task2tool --help
-```
-
-Find resources for a task:
+Point the CLI at your own agent-resource directory:
 
 ```bash
 npx --yes github:mockingbird777/task2tool find \
@@ -60,6 +105,15 @@ task2tool find "summarize an incident timeline" --root ~/agents
 ```
 
 ## Commands
+
+### `task2tool demo [task]`
+
+Searches the bundled example shelf, making it the fastest way to inspect ranking and output formats before pointing Task2Tool at private files.
+
+```bash
+task2tool demo
+task2tool demo "research authoritative sources with citations" --format json
+```
 
 ### `task2tool index [directory]`
 
@@ -195,7 +249,11 @@ npm audit
 
 The project targets strict TypeScript and Node.js 20+, has zero runtime dependencies, and tests scanning boundaries, deterministic ranking, multilingual tokenization, output escaping, lint behavior, npm-style binary symlinks, and packed CLI flows.
 
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), use the issue templates for scoped proposals, and keep new integrations local-first.
+## Contributing
+
+Useful first contributions include a minimal fixture for an agent-resource format you use, a retrieval query with an unexpected ranking, or a focused catalog lint rule. Start with the [contribution guide](CONTRIBUTING.md) and choose a scoped [issue template](https://github.com/mockingbird777/task2tool/issues/new/choose). Security reports follow the private process in [SECURITY.md](SECURITY.md).
+
+If Task2Tool makes a real agent workspace easier to navigate, a GitHub star helps other builders discover it.
 
 ## License
 

@@ -9,15 +9,19 @@ import { publicResource, scanWorkspace } from "./scanner.js";
 import { searchResources } from "./search.js";
 import type { OutputFormat, ReportData, ResourceKind } from "./types.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
+const DEMO_QUERY = "review a pull request for security and reliability bugs";
 const HELP = `Task2Tool ${VERSION} — find the right agent resource without loading every tool
 
 Usage:
+  task2tool demo [natural-language task] [--limit 3] [--format ...]
   task2tool index [directory] [--format json|markdown|html] [--output file]
   task2tool find <natural-language task> [--root directory] [--limit 10] [--format ...]
   task2tool lint [directory] [--format json|markdown|html] [--output file]
 
 Examples:
+  task2tool demo
+  task2tool demo "write a blameless incident summary"
   task2tool index . --format json --output task2tool-index.json
   task2tool find "review a pull request for security bugs" --root ~/agents
   task2tool find "query a Postgres database" --format html --output matches.html
@@ -127,25 +131,27 @@ export async function runCli(
 
   try {
     const command = arguments_[0];
-    if (command !== "index" && command !== "find" && command !== "lint") throw new Error(`Unknown command '${command ?? ""}'. Run task2tool --help.`);
+    if (command !== "demo" && command !== "index" && command !== "find" && command !== "lint") throw new Error(`Unknown command '${command ?? ""}'. Run task2tool --help.`);
     const parsed = parseArguments(arguments_.slice(1));
     const outputPath = parsed.options.get("output");
     const format = chooseFormat(parsed.options.get("format"), outputPath);
     let report: ReportData;
     let exitCode = 0;
 
-    if (command === "find") {
-      if (parsed.positionals.length === 0) throw new Error("The find command requires a natural-language task.");
-      const query = parsed.positionals.join(" ");
-      const root = parsed.options.get("root") ?? ".";
-      const rawLimit = parsed.options.get("limit") ?? "10";
+    if (command === "find" || command === "demo") {
+      if (command === "find" && parsed.positionals.length === 0) throw new Error("The find command requires a natural-language task.");
+      const query = parsed.positionals.join(" ") || DEMO_QUERY;
+      const root = parsed.options.get("root") ?? (command === "demo"
+        ? fileURLToPath(new URL("../../examples/", import.meta.url))
+        : ".");
+      const rawLimit = parsed.options.get("limit") ?? (command === "demo" ? "3" : "10");
       if (!/^\d+$/u.test(rawLimit)) throw new Error("Limit must be an integer between 1 and 100.");
       const limit = Number(rawLimit);
       const scan = await scanWorkspace(root);
       const hits = searchResources(scan.resources, query, limit);
       report = {
-        command,
-        title: "Relevant capabilities for your task",
+        command: "find",
+        title: command === "demo" ? "Task2Tool demo: relevant capabilities" : "Relevant capabilities for your task",
         root: scan.root,
         query,
         hits,

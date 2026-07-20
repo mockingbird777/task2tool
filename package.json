@@ -1,6 +1,6 @@
 {
   "name": "task2tool",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first discovery for AI agent skills, prompts, MCP servers, and catalogs.",
   "type": "module",
   "bin": {
@@ -8,6 +8,7 @@
   },
   "files": [
     "dist/src",
+    "assets/banner.svg",
     "examples",
     "schema",
     "README.md",
