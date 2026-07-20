@@ -150,3 +150,30 @@ test("bounds entries, resources, and diagnostics from malformed catalogs", async
   assert.equal(diagnosticLimited.diagnostics.some((issue) => issue.code === "DIAGNOSTICS_TRUNCATED"), true);
   assert.ok(diagnosticLimited.diagnostics.length <= 2);
 });
+
+test("discovers GitHub Copilot instruction Markdown as prompt resources", async (t) => {
+  const root = await workspace(t);
+  await mkdir(join(root, ".github", "instructions"), { recursive: true });
+  await writeFile(join(root, ".github", "copilot-instructions.md"), "# Repo Conventions\n\nAlways write tests first.\n");
+  await writeFile(join(root, ".github", "instructions", "security.instructions.md"), "---\nname: Security Rules\ntags: [security]\n---\n# Security\n\nNever log credentials.\n");
+  await writeFile(join(root, "README.md"), "# Readme\n\nOrdinary docs stay out of the catalog.\n");
+  await writeFile(join(root, "notes.md"), "# Notes\n\nAlso ignored.\n");
+  await writeFile(join(root, "COPILOT-INSTRUCTIONS.MD"), "# Uppercase\n\nCase-insensitive match.\n");
+
+  const first = await scanWorkspace(root);
+  const second = await scanWorkspace(root);
+  assert.deepEqual(first.resources, second.resources); // deterministic ordering
+
+  const kinds = first.resources.map((resource) => resource.kind);
+  assert.deepEqual(kinds, ["prompt", "prompt", "prompt"]);
+  const names = first.resources.map((resource) => resource.name).sort();
+  assert.deepEqual(names, ["Repo Conventions", "Security Rules", "Uppercase"]);
+
+  const security = first.resources.find((resource) => resource.name === "Security Rules");
+  assert.match(security?.description ?? "", /credentials/u);
+  assert.deepEqual(security?.tags, ["prompt", "security"]);
+  assert.match(security?.id ?? "", /^prompt:/u);
+
+  const paths = first.resources.map((resource) => resource.path).join("\n");
+  assert.doesNotMatch(paths, /README\.md|notes\.md/u);
+});
