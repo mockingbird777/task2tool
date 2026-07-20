@@ -6,7 +6,7 @@ The latest released minor version receives security fixes. Before a `1.0.0` rele
 
 | Version | Supported |
 | --- | --- |
-| 0.1.x | Yes |
+| 0.2.x | Yes |
 | Older | No |
 
 ## Report a vulnerability

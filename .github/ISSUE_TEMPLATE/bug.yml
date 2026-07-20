@@ -11,14 +11,14 @@ body:
     attributes:
       label: Task2Tool and Node versions
       description: Output of `task2tool --version` and `node --version`.
-      placeholder: "Task2Tool 0.1.0; Node v20.x"
+      placeholder: "Task2Tool 0.2.0; Node v20.x"
     validations:
       required: true
   - type: dropdown
     id: command
     attributes:
       label: Command
-      options: [index, find, lint, install or build]
+      options: [demo, index, find, lint, install or build]
     validations:
       required: true
   - type: textarea
