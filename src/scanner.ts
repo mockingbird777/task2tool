@@ -127,13 +127,15 @@ function markdownKind(fileName: string): ResourceKind | undefined {
   if (lower === "skill.md" || lower.endsWith(".skill.md")) return "skill";
   if (lower.endsWith(".agent.md")) return "agent";
   if (lower.endsWith(".prompt.md")) return "prompt";
+  // GitHub Copilot instruction conventions are prompt resources too.
+  if (lower === "copilot-instructions.md" || lower.endsWith(".instructions.md")) return "prompt";
   return undefined;
 }
 
 function markdownResource(content: string, resourcePath: string, kind: ResourceKind): ScannedResource {
   const { metadata, body } = parseFrontmatter(content);
   const summary = markdownSummary(body);
-  const fallback = basename(resourcePath).replace(/\.(skill|agent|prompt)?\.md$/iu, "");
+  const fallback = basename(resourcePath).replace(/\.(skill|agent|prompt|instructions)?\.md$/iu, "");
   const name = metadata.name ?? summary.heading ?? fallback;
   const description = metadata.description ?? summary.description ?? "";
   const details = summary.headings.length > 1 ? { sections: summary.headings.slice(1, 7).join(", ") } : undefined;

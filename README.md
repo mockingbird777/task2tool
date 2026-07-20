@@ -152,6 +152,7 @@ All commands support `json`, `markdown` (or `md`), and self-contained `html`. A 
 | Skills | `SKILL.md`, `*.skill.md` | `skill` |
 | Agent definitions | `*.agent.md` | `agent` |
 | Prompt libraries | `*.prompt.md` | `prompt` |
+| Copilot instructions | `copilot-instructions.md`, `*.instructions.md` | `prompt` |
 | MCP configuration | JSON with `mcpServers` | one `mcp-server` per entry |
 | Catalogs | `catalog.json`, `*.catalog.json`, or schema-shaped JSON | declared kind |
 
