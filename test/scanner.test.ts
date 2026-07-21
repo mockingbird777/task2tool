@@ -177,3 +177,69 @@ test("discovers GitHub Copilot instruction Markdown as prompt resources", async 
   const paths = first.resources.map((resource) => resource.path).join("\n");
   assert.doesNotMatch(paths, /README\.md|notes\.md/u);
 });
+
+
+test("parses YAML block-list tags and keywords in frontmatter", async (t) => {
+  const root = await workspace(t);
+  const content = [
+    "---",
+    "name: Block Tags",
+    "tags:",
+    "  - security",
+    '  - "review"',
+    "keywords:",
+    "  - 'audit'",
+    "---",
+    "# Block",
+    "",
+    "Body.",
+  ].join("\n");
+  await writeFile(join(root, "block.prompt.md"), content);
+
+  const scan = await scanWorkspace(root);
+  const resource = scan.resources.find((r) => r.name === "Block Tags");
+  assert.ok(resource);
+  // kind tag + block-list values, deduped and sorted deterministically.
+  assert.deepEqual(resource.tags, ["audit", "prompt", "review", "security"]);
+});
+
+test("still parses inline-list tags", async (t) => {
+  const root = await workspace(t);
+  const content = [
+    "---",
+    "name: Inline",
+    "tags: [security, review]",
+    "---",
+    "# Inline",
+    "",
+    "Body.",
+  ].join("\n");
+  await writeFile(join(root, "inline.prompt.md"), content);
+
+  const scan = await scanWorkspace(root);
+  const resource = scan.resources.find((r) => r.name === "Inline");
+  assert.ok(resource);
+  assert.deepEqual(resource.tags, ["prompt", "review", "security"]);
+});
+
+test("block-list stops at a nested/mapping item without crashing", async (t) => {
+  const root = await workspace(t);
+  const content = [
+    "---",
+    "name: Nested",
+    "tags:",
+    "  - security",
+    "  - nested: value",
+    "---",
+    "# Nested",
+    "",
+    "Body.",
+  ].join("\n");
+  await writeFile(join(root, "nested.prompt.md"), content);
+
+  const scan = await scanWorkspace(root);
+  const resource = scan.resources.find((r) => r.name === "Nested");
+  assert.ok(resource);
+  // The scalar before the mapping item is kept; the mapping item is not.
+  assert.deepEqual(resource.tags, ["prompt", "security"]);
+});

@@ -166,6 +166,17 @@ tags: [code-review, security, testing]
 ---
 ```
 
+`tags` and `keywords` accept either the inline `[a, b]` form above or a YAML block list:
+
+```markdown
+---
+name: Pull Request Risk Reviewer
+tags:
+  - code-review
+  - security
+---
+```
+
 Task2Tool extracts a fallback name and description from headings and prose when frontmatter is absent.
 
 Directories commonly containing generated or private implementation state are skipped: `.git`, `node_modules`, `dist`, `coverage`, and `.task2tool`. Symbolic links are not followed. Files larger than 1 MiB are skipped and linted when they look like a supported resource.
