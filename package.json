@@ -1,7 +1,7 @@
 {
   "name": "task2tool",
-  "version": "0.2.0",
-  "description": "Local-first discovery for AI agent skills, prompts, MCP servers, and catalogs.",
+  "version": "0.3.0",
+  "description": "Find and compose complementary local AI-agent skills, prompts, MCP servers, and catalogs.",
   "type": "module",
   "bin": {
     "task2tool": "dist/src/cli.js"

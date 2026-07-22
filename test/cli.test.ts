@@ -58,7 +58,7 @@ test("CLI exposes help and version without scanning", async () => {
   assert.match(help.read(), /task2tool compose/u);
   const version = capture();
   assert.equal(await runCli(["--version"], version.stream, errors.stream), 0);
-  assert.equal(version.read(), "0.2.0\n");
+  assert.equal(version.read(), "0.3.0\n");
 });
 
 test("CLI demo finds useful bundled examples without setup", async () => {
@@ -84,5 +84,5 @@ test("CLI runs when invoked through an npm-style binary symlink", async (t) => {
 
   const result = spawnSync(process.execPath, [link, "--version"], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout, "0.2.0\n");
+  assert.equal(result.stdout, "0.3.0\n");
 });

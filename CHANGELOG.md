@@ -4,10 +4,17 @@ All notable changes to Task2Tool are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-22
+
 ### Added
 
 - Recognize YAML block-list `tags`/`keywords` in Markdown frontmatter (in addition to the inline `[a, b]` form), with no new runtime dependency.
 - `task2tool compose` for selecting a compact set of complementary resources by greedy marginal lexical coverage, with per-resource additions, cumulative coverage, and explicit uncovered terms in JSON, Markdown, and HTML.
+
+### Changed
+
+- Upgraded the live Pages lab from top-k search to an interactive complementary-capability composition demo.
+- Human-facing matched terms retain readable normalized query words while the ranker keeps its bounded stemming behavior internally.
 
 ## [0.2.0] - 2026-07-20
 
@@ -31,6 +38,7 @@ All notable changes to Task2Tool are documented here. The format follows [Keep a
 - Verified npm-style binary symlink execution and packed-install smoke coverage.
 - Interactive static demo, versioned catalog schema, examples, automated tests, CI, and Pages deployment.
 
-[Unreleased]: https://github.com/mockingbird777/task2tool/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mockingbird777/task2tool/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/mockingbird777/task2tool/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mockingbird777/task2tool/releases/tag/v0.2.0
 [0.1.0]: https://github.com/mockingbird777/task2tool/releases/tag/v0.1.0

@@ -10,7 +10,7 @@ import { publicResource, scanWorkspace } from "./scanner.js";
 import { searchResources } from "./search.js";
 import type { OutputFormat, ReportData, ResourceKind } from "./types.js";
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const DEMO_QUERY = "review a pull request for security and reliability bugs";
 const HELP = `Task2Tool ${VERSION} — find the right agent resource without loading every tool
 
