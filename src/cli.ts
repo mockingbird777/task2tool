@@ -4,6 +4,7 @@ import { rename, unlink, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatReport } from "./format.js";
+import { composeResources } from "./compose.js";
 import { lintScan } from "./lint.js";
 import { publicResource, scanWorkspace } from "./scanner.js";
 import { searchResources } from "./search.js";
@@ -17,6 +18,7 @@ Usage:
   task2tool demo [natural-language task] [--limit 3] [--format ...]
   task2tool index [directory] [--format json|markdown|html] [--output file]
   task2tool find <natural-language task> [--root directory] [--limit 10] [--format ...]
+  task2tool compose <natural-language task> [--root directory] [--limit 5] [--format ...]
   task2tool lint [directory] [--format json|markdown|html] [--output file]
 
 Examples:
@@ -25,13 +27,14 @@ Examples:
   task2tool index . --format json --output task2tool-index.json
   task2tool find "review a pull request for security bugs" --root ~/agents
   task2tool find "query a Postgres database" --format html --output matches.html
+  task2tool compose "review an API change for security and update release notes" --root ~/agents
   task2tool lint ./catalog
 
 Options:
   -f, --format <value>  json, markdown, or html (inferred from --output when possible)
   -o, --output <path>   write atomically to a file; use - for stdout
       --root <path>     scan root for find, or override the positional directory
-      --limit <number>  number of find results, 1–100 (default: 10)
+      --limit <number>  maximum matches or composed resources, 1–100
   -h, --help            show help
   -v, --version         show version
 `;
@@ -131,32 +134,51 @@ export async function runCli(
 
   try {
     const command = arguments_[0];
-    if (command !== "demo" && command !== "index" && command !== "find" && command !== "lint") throw new Error(`Unknown command '${command ?? ""}'. Run task2tool --help.`);
+    if (command !== "demo" && command !== "index" && command !== "find" && command !== "compose" && command !== "lint") throw new Error(`Unknown command '${command ?? ""}'. Run task2tool --help.`);
     const parsed = parseArguments(arguments_.slice(1));
     const outputPath = parsed.options.get("output");
     const format = chooseFormat(parsed.options.get("format"), outputPath);
     let report: ReportData;
     let exitCode = 0;
 
-    if (command === "find" || command === "demo") {
-      if (command === "find" && parsed.positionals.length === 0) throw new Error("The find command requires a natural-language task.");
+    if (command === "find" || command === "compose" || command === "demo") {
+      if (command !== "demo" && parsed.positionals.length === 0) throw new Error(`The ${command} command requires a natural-language task.`);
       const query = parsed.positionals.join(" ") || DEMO_QUERY;
       const root = parsed.options.get("root") ?? (command === "demo"
         ? fileURLToPath(new URL("../../examples/", import.meta.url))
         : ".");
-      const rawLimit = parsed.options.get("limit") ?? (command === "demo" ? "3" : "10");
+      const rawLimit = parsed.options.get("limit") ?? (command === "demo" ? "3" : command === "compose" ? "5" : "10");
       if (!/^\d+$/u.test(rawLimit)) throw new Error("Limit must be an integer between 1 and 100.");
       const limit = Number(rawLimit);
       const scan = await scanWorkspace(root);
-      const hits = searchResources(scan.resources, query, limit);
-      report = {
-        command: "find",
-        title: command === "demo" ? "Task2Tool demo: relevant capabilities" : "Relevant capabilities for your task",
-        root: scan.root,
-        query,
-        hits,
-        summary: { matches: hits.length, scannedResources: scan.resources.length, filesVisited: scan.filesVisited }
-      };
+      if (command === "compose") {
+        const composition = composeResources(scan.resources, query, limit);
+        report = {
+          command,
+          title: "Coverage-aware capability composition",
+          root: scan.root,
+          query,
+          composition,
+          summary: {
+            selectedResources: composition.picks.length,
+            lexicalCoveragePercent: composition.lexicalCoveragePercent,
+            coveredTerms: composition.coveredTerms.length,
+            uncoveredTerms: composition.uncoveredTerms.length,
+            scannedResources: scan.resources.length,
+            filesVisited: scan.filesVisited
+          }
+        };
+      } else {
+        const hits = searchResources(scan.resources, query, limit);
+        report = {
+          command: "find",
+          title: command === "demo" ? "Task2Tool demo: relevant capabilities" : "Relevant capabilities for your task",
+          root: scan.root,
+          query,
+          hits,
+          summary: { matches: hits.length, scannedResources: scan.resources.length, filesVisited: scan.filesVisited }
+        };
+      }
     } else {
       if (parsed.positionals.length > 1) throw new Error(`${command} accepts at most one directory.`);
       const root = parsed.options.get("root") ?? parsed.positionals[0] ?? ".";

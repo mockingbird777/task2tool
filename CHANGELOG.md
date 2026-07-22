@@ -7,6 +7,7 @@ All notable changes to Task2Tool are documented here. The format follows [Keep a
 ### Added
 
 - Recognize YAML block-list `tags`/`keywords` in Markdown frontmatter (in addition to the inline `[a, b]` form), with no new runtime dependency.
+- `task2tool compose` for selecting a compact set of complementary resources by greedy marginal lexical coverage, with per-resource additions, cumulative coverage, and explicit uncovered terms in JSON, Markdown, and HTML.
 
 ## [0.2.0] - 2026-07-20
 

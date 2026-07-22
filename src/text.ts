@@ -9,7 +9,7 @@ export function normalizeText(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US");
 }
 
-function stem(token: string): string {
+export function stemToken(token: string): string {
   if (token.length > 5 && token.endsWith("ing")) return token.slice(0, -3);
   if (token.length > 4 && token.endsWith("ed")) return token.slice(0, -2);
   if (token.length > 4 && token.endsWith("es")) return token.slice(0, -2);
@@ -17,14 +17,14 @@ function stem(token: string): string {
   return token;
 }
 
-export function tokenize(value: string): string[] {
+function tokenizeInternal(value: string, applyStemming: boolean): string[] {
   const normalized = normalizeText(value);
   const output: string[] = [];
 
   for (const match of normalized.matchAll(/[\p{L}\p{N}]+/gu)) {
     const valueToken = match[0];
     if (STOP_WORDS.has(valueToken)) continue;
-    const token = stem(valueToken);
+    const token = applyStemming ? stemToken(valueToken) : valueToken;
     if ((token.length > 1 || /^\d$/u.test(token)) && token.length <= MAX_EXACT_TOKEN_CHARACTERS) output.push(token);
     if (output.length >= MAX_TOKENS_PER_VALUE) break;
     if (/^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+$/u.test(token) && token.length > 2) {
@@ -37,6 +37,14 @@ export function tokenize(value: string): string[] {
     }
   }
   return output;
+}
+
+export function tokenize(value: string): string[] {
+  return tokenizeInternal(value, true);
+}
+
+export function tokenizeForDisplay(value: string): string[] {
+  return tokenizeInternal(value, false);
 }
 
 export function uniqueSorted(values: readonly string[]): string[] {

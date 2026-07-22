@@ -30,6 +30,16 @@ test("CLI indexes and finds a real temporary catalog", async (t) => {
   assert.equal(await runCli(["find", "security code review", "--root", root, "--format", "json"], found.stream, errors.stream), 0);
   const result = JSON.parse(found.read()) as { hits: Array<{ resource: { name: string } }> };
   assert.equal(result.hits[0]?.resource.name, "Review Helper");
+
+  const composed = capture();
+  assert.equal(await runCli(["compose", "security review release", "--root", root, "--format", "json"], composed.stream, errors.stream), 0);
+  const composition = JSON.parse(composed.read()) as {
+    schemaVersion: string;
+    composition: { picks: Array<{ resource: { name: string }; newTerms: string[] }>; uncoveredTerms: string[] };
+  };
+  assert.equal(composition.schemaVersion, "1.1");
+  assert.equal(composition.composition.picks[0]?.resource.name, "Review Helper");
+  assert.ok(composition.composition.uncoveredTerms.includes("release"));
 });
 
 test("CLI prints concise validation errors", async () => {
@@ -45,6 +55,7 @@ test("CLI exposes help and version without scanning", async () => {
   const errors = capture();
   assert.equal(await runCli(["--help"], help.stream, errors.stream), 0);
   assert.match(help.read(), /task2tool find/u);
+  assert.match(help.read(), /task2tool compose/u);
   const version = capture();
   assert.equal(await runCli(["--version"], version.stream, errors.stream), 0);
   assert.equal(version.read(), "0.2.0\n");

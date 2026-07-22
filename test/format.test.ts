@@ -56,3 +56,34 @@ test("empty search reports have useful empty states", () => {
   assert.match(formatReport(report, "markdown"), /No matching resources/u);
   assert.match(formatReport(report, "html"), /Nothing to show yet/u);
 });
+
+test("composition reports disclose additions, gaps, and lexical limits safely", () => {
+  const report: ReportData = {
+    command: "compose",
+    title: "Composition",
+    root: ".",
+    query: `review ${MALICIOUS}`,
+    summary: { selectedResources: 1, lexicalCoveragePercent: 50 },
+    composition: {
+      queryTerms: ["review", "missing<script>"],
+      coveredTerms: ["review"],
+      uncoveredTerms: ["missing<script>"],
+      lexicalCoveragePercent: 50,
+      picks: [{
+        resource: REPORT.resources![0]!, score: 2, matchedTerms: ["review"],
+        newTerms: ["review"], cumulativeCoveragePercent: 50
+      }]
+    }
+  };
+  const json = formatReport(report, "json");
+  const markdown = formatReport(report, "markdown");
+  const html = formatReport(report, "html");
+  assert.equal(JSON.parse(json).schemaVersion, "1.1");
+  assert.match(markdown, /Newly covered terms/u);
+  assert.match(markdown, /Still uncovered/u);
+  assert.match(markdown, /not a semantic capability guarantee/u);
+  assert.match(html, /Cumulative lexical coverage/u);
+  assert.match(html, /Still uncovered: missing&lt;script&gt;/u);
+  assert.match(html, /not a semantic capability guarantee/u);
+  assert.doesNotMatch(html, /<img src=x|<script>alert/u);
+});

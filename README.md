@@ -21,7 +21,7 @@
   <a href="https://github.com/mockingbird777/task2tool/issues/new/choose">Suggest a resource format</a>
 </p>
 
-Task2Tool discovers `SKILL.md`, agents, prompts, MCP server configurations, and portable catalog JSON. A deterministic BM25-inspired ranker turns natural-language work into a short, explainable candidate list that any agent runtime can consume.
+Task2Tool discovers `SKILL.md`, agents, prompts, MCP server configurations, and portable catalog JSON. A deterministic BM25-inspired ranker finds individual matches, while a coverage-aware composer selects a small set of complementary capabilities and shows exactly what each one adds.
 
 > Local-first means local: no account, hosted index, API key, telemetry, or runtime dependency.
 
@@ -63,6 +63,7 @@ Agent ecosystems are getting composable—and crowded. Advertising every skill, 
 
 ```text
 natural-language task → local scan → weighted lexical index → top-k capabilities
+                                      ↘ complementary capability set + coverage gaps
 ```
 
 It is intentionally **not** an agent framework: Task2Tool finds candidates; your runtime decides what to load or invoke.
@@ -70,6 +71,7 @@ It is intentionally **not** an agent framework: Task2Tool finds candidates; your
 | Instead of | Task2Tool gives you |
 | --- | --- |
 | Loading an entire tool registry | A ranked top-k with scores and matched terms |
+| Picking several overlapping tools | A greedy composition with newly covered and still-uncovered terms |
 | Grepping filenames | Weighted search across names, tags, descriptions, headings, and content |
 | Running a hosted vector database | Offline, reproducible lexical retrieval with no model or API key |
 | Adopting another agent runtime | Portable JSON, Markdown, or HTML that fits the runtime you already use |
@@ -89,6 +91,14 @@ Create a machine-readable inventory:
 ```bash
 npx --yes github:mockingbird777/task2tool index ./my-agent-library \
   --format json --output task2tool-index.json
+```
+
+Compose a complementary set for a multi-part task:
+
+```bash
+npx --yes github:mockingbird777/task2tool compose \
+  "review an API change for security and update release notes" \
+  --root ./my-agent-library --limit 5
 ```
 
 Check catalog health:
@@ -134,6 +144,16 @@ task2tool find "調查安全漏洞" --root . --format json
 ```
 
 The query may be unquoted, but quoting it avoids shell interpretation. `--limit` accepts 1–100.
+
+### `task2tool compose <task>`
+
+Builds a compact set of complementary local resources. At each step Task2Tool chooses the candidate that covers the most currently uncovered query terms, then breaks ties by its normal relevance score and stable ID. Every pick reports `newTerms` and `cumulativeCoveragePercent`; the plan also reports `uncoveredTerms` so a missing capability stays visible.
+
+```bash
+task2tool compose "investigate postgres latency and write an incident summary" --root . --format json
+```
+
+Composition is deliberately lexical, not semantic: `database` will not automatically satisfy `Postgres` unless the indexed metadata shares normalized terms. The percentage is an explainable word-overlap measure, never a guarantee that a resource can complete the task.
 
 ### `task2tool lint [directory]`
 
@@ -218,6 +238,8 @@ Task2Tool uses deterministic lexical retrieval rather than embeddings or a remot
 4. Add small exact-phrase and all-terms bonuses.
 5. Break ties by resource name, then stable resource ID.
 
+The `compose` command adds a bounded greedy pass over those scores. It prioritizes marginal term coverage, stops when no remaining resource adds coverage, and caps the query at the same 256 normalized terms used by search.
+
 This makes results fast, offline, explainable, and reproducible. It will not understand semantic synonyms that share no words; semantic reranking is intentionally left as an optional future layer.
 
 ## Privacy and security
@@ -241,8 +263,10 @@ flowchart LR
   C --> D["Weighted lexical index"]
   Q["Natural-language task"] --> D
   D --> E["Deterministic top-k"]
+  D --> H["Greedy coverage composer"]
   C --> F["Lint rules"]
   E --> G["JSON / Markdown / HTML"]
+  H --> G
   F --> G
 ```
 
