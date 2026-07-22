@@ -8,27 +8,44 @@ interface IndexedDocument {
   frequencies: Map<string, number>;
 }
 
-const MAX_QUERY_TERMS = 256;
+export const MAX_QUERY_TERMS = 256;
+export const MAX_QUERY_CHARACTERS = 8_192;
 
 interface QueryTerm {
   match: string;
   display: string;
 }
 
-function queryTerms(query: string): QueryTerm[] {
+export interface LexicalQueryAnalysis {
+  evaluatedTerms: QueryTerm[];
+  ignoredTerms: QueryTerm[];
+  totalTerms: number;
+}
+
+export function analyzeLexicalQuery(query: string): LexicalQueryAnalysis {
+  if (query.length > MAX_QUERY_CHARACTERS) {
+    throw new Error(`Search query must not exceed ${MAX_QUERY_CHARACTERS.toLocaleString("en-US")} source or normalized characters.`);
+  }
+  const normalizedQuery = normalizeText(query);
+  if (normalizedQuery.length > MAX_QUERY_CHARACTERS) {
+    throw new Error(`Search query must not exceed ${MAX_QUERY_CHARACTERS.toLocaleString("en-US")} source or normalized characters.`);
+  }
   const byMatch = new Map<string, string>();
-  for (const display of uniqueSorted(tokenizeForDisplay(query))) {
+  for (const display of uniqueSorted(tokenizeForDisplay(normalizedQuery))) {
     const match = stemToken(display);
     if (!byMatch.has(match)) byMatch.set(match, display);
-    if (byMatch.size >= MAX_QUERY_TERMS) break;
   }
-  return [...byMatch.entries()].map(([match, display]) => ({ match, display }));
+  const terms = [...byMatch.entries()].map(([match, display]) => ({ match, display }));
+  if (terms.length === 0) throw new Error("Search query must contain at least one searchable word.");
+  return {
+    evaluatedTerms: terms.slice(0, MAX_QUERY_TERMS),
+    ignoredTerms: terms.slice(MAX_QUERY_TERMS),
+    totalTerms: terms.length
+  };
 }
 
 export function lexicalQueryTerms(query: string): string[] {
-  const terms = queryTerms(query);
-  if (terms.length === 0) throw new Error("Search query must contain at least one searchable word.");
-  return terms.map((term) => term.display);
+  return analyzeLexicalQuery(query).evaluatedTerms.map((term) => term.display);
 }
 
 function weightedTerms(resource: ScannedResource): string[] {
@@ -51,8 +68,7 @@ function frequencies(terms: readonly string[]): Map<string, number> {
 }
 
 export function rankResources(resources: readonly ScannedResource[], query: string): SearchHit[] {
-  const queryLexemes = queryTerms(query);
-  if (queryLexemes.length === 0) throw new Error("Search query must contain at least one searchable word.");
+  const queryLexemes = analyzeLexicalQuery(query).evaluatedTerms;
   if (resources.length === 0) return [];
 
   const documents: IndexedDocument[] = resources.map((resource) => {

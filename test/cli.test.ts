@@ -37,7 +37,7 @@ test("CLI indexes and finds a real temporary catalog", async (t) => {
     schemaVersion: string;
     composition: { picks: Array<{ resource: { name: string }; newTerms: string[] }>; uncoveredTerms: string[] };
   };
-  assert.equal(composition.schemaVersion, "1.1");
+  assert.equal(composition.schemaVersion, "1.2");
   assert.equal(composition.composition.picks[0]?.resource.name, "Review Helper");
   assert.ok(composition.composition.uncoveredTerms.includes("release"));
 });
@@ -48,6 +48,34 @@ test("CLI prints concise validation errors", async () => {
   assert.equal(await runCli(["find", "task", "--limit", "0"], output.stream, errors.stream), 2);
   assert.match(errors.read(), /^task2tool: Limit must/u);
   assert.doesNotMatch(errors.read(), /\n\s+at /u);
+});
+
+test("CLI errors remove terminal-active control sequences", async () => {
+  const output = capture();
+  const errors = capture();
+  const maliciousCommand = `bad\u001b]52;c;Zm9v\u0007\u001b]8;;https://malicious.invalid\u001b\\link\u001b]8;;\u001b\\\u009b31m`;
+  assert.equal(await runCli([maliciousCommand], output.stream, errors.stream), 2);
+  assert.doesNotMatch(errors.read(), /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u);
+  assert.doesNotMatch(errors.read(), /(?:\]52|Zm9v|malicious\.invalid|\]8;;|31m)/u);
+  assert.match(errors.read(), /^task2tool: Unknown command/u);
+});
+
+test("default Markdown stdout removes complete OSC sequences from scanned metadata", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "task2tool-terminal-"));
+  t.after(async () => rm(root, { recursive: true, force: true }));
+  const oscClipboard = `\u001b]52;c;Zm9v\u0007`;
+  const oscLink = `\u001b]8;;https://malicious.invalid\u001b\\`;
+  const oscClose = `\u001b]8;;\u001b\\`;
+  await writeFile(join(root, "unsafe.prompt.md"), `# Safe${oscClipboard}Title\n\n${oscLink}Visible${oscClose}\n`);
+  const output = capture();
+  const errors = capture();
+
+  assert.equal(await runCli(["index", root], output.stream, errors.stream), 0, errors.read());
+  const markdown = output.read();
+  assert.doesNotMatch(markdown, /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u);
+  assert.doesNotMatch(markdown, /(?:\]52|Zm9v|malicious\.invalid|\]8;;)/u);
+  assert.match(markdown, /SafeTitle/u);
+  assert.match(markdown, /Visible/u);
 });
 
 test("CLI exposes help and version without scanning", async () => {

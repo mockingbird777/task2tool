@@ -147,13 +147,13 @@ The query may be unquoted, but quoting it avoids shell interpretation. `--limit`
 
 ### `task2tool compose <task>`
 
-Builds a compact set of complementary local resources. At each step Task2Tool chooses the candidate that covers the most currently uncovered query terms, then breaks ties by its normal relevance score and stable ID. Every pick reports `newTerms` and `cumulativeCoveragePercent`; the plan also reports `uncoveredTerms` so a missing capability stays visible.
+Builds a compact set of complementary local resources. At each step Task2Tool chooses the candidate that covers the most currently uncovered query terms, then breaks ties by its normal relevance score and stable ID. Every pick reports `newTerms` and `cumulativeCoveragePercent`; the plan also reports `uncoveredTerms` so a missing capability stays visible. JSON schema `1.2` adds `queryBoundary`, which records the evaluated-term limit, total normalized terms, truncation state, and every term outside the boundary.
 
 ```bash
 task2tool compose "investigate postgres latency and write an incident summary" --root . --format json
 ```
 
-Composition is deliberately lexical, not semantic: `database` will not automatically satisfy `Postgres` unless the indexed metadata shares normalized terms. The percentage is an explainable word-overlap measure, never a guarantee that a resource can complete the task.
+Composition is deliberately lexical, not semantic: `database` will not automatically satisfy `Postgres` unless the indexed metadata shares normalized terms. The percentage is an explainable word-overlap measure, never a guarantee that a resource can complete the task. Source and normalized query text are each limited to 8,192 characters. Composition evaluates at most 256 distinct normalized terms; if more are present, JSON, Markdown, and HTML disclose the ignored terms and count them as uncovered in the reported percentage.
 
 ### `task2tool lint [directory]`
 
@@ -238,7 +238,7 @@ Task2Tool uses deterministic lexical retrieval rather than embeddings or a remot
 4. Add small exact-phrase and all-terms bonuses.
 5. Break ties by resource name, then stable resource ID.
 
-The `compose` command adds a bounded greedy pass over those scores. It prioritizes marginal term coverage, stops when no remaining resource adds coverage, and caps the query at the same 256 normalized terms used by search.
+The `compose` command adds a bounded greedy pass over those scores. It prioritizes marginal term coverage and stops when no remaining resource adds coverage. Search and composition evaluate at most 256 distinct normalized query terms. Composition additionally records the full bounded term count and every ignored term in `queryBoundary`; ignored terms count as uncovered, so a partial evaluation can never appear as 100% coverage. Source and normalized query text are each capped at 8,192 characters.
 
 This makes results fast, offline, explainable, and reproducible. It will not understand semantic synonyms that share no words; semantic reranking is intentionally left as an optional future layer.
 
@@ -246,7 +246,7 @@ This makes results fast, offline, explainable, and reproducible. It will not und
 
 - Reports never include MCP argument arrays or environment values. Only safe discovery metadata such as name, description, command, and transport is exported.
 - `lint` warns when secret-like MCP environment keys contain inline values instead of `${ENVIRONMENT_VARIABLE}` references.
-- HTML and Markdown output neutralize untrusted HTML, links, table delimiters, and formatting controls. JSON output neutralizes HTML-significant characters.
+- HTML and Markdown output neutralize untrusted HTML, links, table delimiters, formatting controls, complete ANSI/ECMA-48 sequences, and remaining terminal-active C0/C1 characters. Direct terminal status and error lines receive the same filtering. JSON output neutralizes HTML-significant characters and escapes C0/C1 controls, including DEL.
 - HTML reports include a restrictive content-security policy and require no network access.
 - The scanner does not follow symbolic links and caps both file count and input size.
 

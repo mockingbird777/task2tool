@@ -1,4 +1,4 @@
-import { lexicalQueryTerms, rankResources } from "./search.js";
+import { analyzeLexicalQuery, MAX_QUERY_TERMS, rankResources } from "./search.js";
 import type { CompositionPlan, ScannedResource, SearchHit } from "./types.js";
 
 function coveragePercent(covered: number, total: number): number {
@@ -17,7 +17,9 @@ export function composeResources(
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
     throw new Error("Limit must be an integer between 1 and 100.");
   }
-  const queryTerms = lexicalQueryTerms(query);
+  const queryAnalysis = analyzeLexicalQuery(query);
+  const queryTerms = queryAnalysis.evaluatedTerms.map((term) => term.display);
+  const ignoredTerms = queryAnalysis.ignoredTerms.map((term) => term.display);
   const candidates = rankResources(resources, query);
   const uncovered = new Set(queryTerms);
   const selected = new Set<string>();
@@ -45,17 +47,23 @@ export function composeResources(
     picks.push({
       ...best,
       newTerms: bestNewTerms,
-      cumulativeCoveragePercent: coveragePercent(queryTerms.length - uncovered.size, queryTerms.length)
+      cumulativeCoveragePercent: coveragePercent(queryTerms.length - uncovered.size, queryAnalysis.totalTerms)
     });
   }
 
   const coveredTerms = queryTerms.filter((term) => !uncovered.has(term));
   const uncoveredTerms = queryTerms.filter((term) => uncovered.has(term));
   return {
+    queryBoundary: {
+      evaluatedTermLimit: MAX_QUERY_TERMS,
+      totalTerms: queryAnalysis.totalTerms,
+      truncated: ignoredTerms.length > 0,
+      ignoredTerms
+    },
     queryTerms,
     coveredTerms,
     uncoveredTerms,
-    lexicalCoveragePercent: coveragePercent(coveredTerms.length, queryTerms.length),
+    lexicalCoveragePercent: coveragePercent(coveredTerms.length, queryAnalysis.totalTerms),
     picks
   };
 }

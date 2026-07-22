@@ -4,6 +4,12 @@ All notable changes to Task2Tool are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+### Fixed
+
+- Disclose the 256-term composition boundary in JSON, Markdown, and HTML, count ignored terms as uncovered, and bound normalized query input so partial evaluation cannot appear as complete coverage.
+- Remove complete ANSI/ECMA-48 control sequences and remaining terminal-active C0/C1 characters from human-readable reports and direct CLI status/error lines.
+- Keep the Pages composition example synchronized with the catalog and its actual 100% lexical-coverage result.
+
 ## [0.3.0] - 2026-07-22
 
 ### Added

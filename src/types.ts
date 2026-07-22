@@ -44,7 +44,15 @@ export interface CompositionPick extends SearchHit {
   cumulativeCoveragePercent: number;
 }
 
+export interface CompositionQueryBoundary {
+  evaluatedTermLimit: number;
+  totalTerms: number;
+  truncated: boolean;
+  ignoredTerms: string[];
+}
+
 export interface CompositionPlan {
+  queryBoundary: CompositionQueryBoundary;
   queryTerms: string[];
   coveredTerms: string[];
   uncoveredTerms: string[];

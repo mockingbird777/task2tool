@@ -1,9 +1,9 @@
 import type { AgentResource, CompositionPick, CompositionPlan, LintIssue, OutputFormat, ReportData, SearchHit } from "./types.js";
-import { escapeHtml, escapeMarkdown, safeJson } from "./text.js";
+import { escapeHtml, escapeMarkdown, safeJson, terminalLine } from "./text.js";
 
 function jsonReport(report: ReportData): string {
   const payload: Record<string, unknown> = {
-    schemaVersion: report.composition ? "1.1" : "1.0",
+    schemaVersion: report.composition ? "1.2" : "1.0",
     command: report.command,
     title: report.title,
     root: report.root
@@ -18,7 +18,7 @@ function jsonReport(report: ReportData): string {
 }
 
 function oneLine(value: string): string {
-  return escapeMarkdown(value.replace(/\s+/gu, " ").trim());
+  return escapeMarkdown(terminalLine(value));
 }
 
 function summaryMarkdown(summary: Readonly<Record<string, number | string>>): string {
@@ -50,12 +50,22 @@ function compositionMarkdown(composition: CompositionPlan): string {
     ? "_No local resource adds lexical coverage for this task._"
     : ["| # | Resource | Kind | Relevance | Newly covered terms | Cumulative coverage |", "| ---: | --- | --- | ---: | --- | ---: |", ...rows].join("\n");
   const uncovered = composition.uncoveredTerms.length === 0 ? "none" : composition.uncoveredTerms.map(oneLine).join(", ");
+  const ignored = composition.queryBoundary.ignoredTerms.map(oneLine).join(", ");
+  const boundary = composition.queryBoundary.truncated
+    ? [
+        "",
+        `> Query boundary: evaluated ${composition.queryTerms.length} of ${composition.queryBoundary.totalTerms} normalized terms (limit ${composition.queryBoundary.evaluatedTermLimit}). Terms outside the boundary count as uncovered in the percentage.`,
+        "",
+        `**Not evaluated:** ${ignored}`
+      ]
+    : [];
   return [
     `**Lexical coverage:** ${composition.lexicalCoveragePercent.toFixed(1)}%`,
     "",
     table,
     "",
-    `**Still uncovered:** ${uncovered}`,
+    `**Still uncovered (evaluated terms):** ${uncovered}`,
+    ...boundary,
     "",
     "> Coverage is based on normalized word overlap. It is explainable retrieval, not a semantic capability guarantee."
   ].join("\n");
@@ -123,7 +133,7 @@ function htmlReport(report: ReportData): string {
     ?? "";
   const empty = cards ? "" : `<div class="empty">Nothing to show yet.</div>`;
   const coverageSummary = report.composition
-    ? `<section class="coverage-note"><strong>${report.composition.lexicalCoveragePercent.toFixed(1)}% lexical coverage</strong><span>Covered: ${escapeHtml(report.composition.coveredTerms.join(", ") || "none")}</span><span>Still uncovered: ${escapeHtml(report.composition.uncoveredTerms.join(", ") || "none")}</span><small>Normalized word overlap; not a semantic capability guarantee.</small></section>`
+    ? `<section class="coverage-note"><strong>${report.composition.lexicalCoveragePercent.toFixed(1)}% lexical coverage</strong><span>Covered: ${escapeHtml(report.composition.coveredTerms.join(", ") || "none")}</span><span>Still uncovered (evaluated terms): ${escapeHtml(report.composition.uncoveredTerms.join(", ") || "none")}</span>${report.composition.queryBoundary.truncated ? `<span><strong>Query boundary:</strong> evaluated ${report.composition.queryTerms.length} of ${report.composition.queryBoundary.totalTerms} normalized terms (limit ${report.composition.queryBoundary.evaluatedTermLimit}).</span><span>Not evaluated: ${escapeHtml(report.composition.queryBoundary.ignoredTerms.join(", "))}</span>` : ""}<small>Normalized word overlap;${report.composition.queryBoundary.truncated ? " terms outside the query boundary count as uncovered;" : ""} not a semantic capability guarantee.</small></section>`
     : "";
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

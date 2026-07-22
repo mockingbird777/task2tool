@@ -8,6 +8,7 @@ import { composeResources } from "./compose.js";
 import { lintScan } from "./lint.js";
 import { publicResource, scanWorkspace } from "./scanner.js";
 import { searchResources } from "./search.js";
+import { terminalLine } from "./text.js";
 import type { OutputFormat, ReportData, ResourceKind } from "./types.js";
 
 const VERSION = "0.3.0";
@@ -106,7 +107,7 @@ async function writeOutput(content: string, outputPath: string | undefined, stdo
     await unlink(temporary).catch(() => undefined);
     throw error;
   }
-  stdout.write(`Wrote ${target}\n`);
+  stdout.write(`Wrote ${terminalLine(target)}\n`);
 }
 
 function resourceSummary(resources: readonly { kind: ResourceKind }[]): Record<string, number> {
@@ -162,8 +163,11 @@ export async function runCli(
           summary: {
             selectedResources: composition.picks.length,
             lexicalCoveragePercent: composition.lexicalCoveragePercent,
+            queryTerms: composition.queryBoundary.totalTerms,
+            evaluatedQueryTerms: composition.queryTerms.length,
             coveredTerms: composition.coveredTerms.length,
             uncoveredTerms: composition.uncoveredTerms.length,
+            ignoredQueryTerms: composition.queryBoundary.ignoredTerms.length,
             scannedResources: scan.resources.length,
             filesVisited: scan.filesVisited
           }
@@ -210,7 +214,7 @@ export async function runCli(
     return exitCode;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    stderr.write(`task2tool: ${message}\n`);
+    stderr.write(`task2tool: ${terminalLine(message)}\n`);
     return 2;
   }
 }
