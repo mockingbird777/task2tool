@@ -4,6 +4,10 @@ All notable changes to Task2Tool are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
+### Added
+
+- Recognize YAML block-list `tags`/`keywords` in Markdown frontmatter (in addition to the inline `[a, b]` form), with no new runtime dependency.
+
 ## [0.2.0] - 2026-07-20
 
 ### Added

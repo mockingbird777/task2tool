@@ -71,17 +71,38 @@ function parseFrontmatter(content: string): { metadata: MarkdownMetadata; body: 
   const end = normalized.indexOf("\n---\n", 4);
   if (end < 0) return { metadata, body: normalized };
 
-  const header = normalized.slice(4, end);
-  for (const line of header.split("\n")) {
-    const match = /^([A-Za-z][\w-]*):\s*(.*)$/u.exec(line);
+  const lines = normalized.slice(4, end).split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = /^([A-Za-z][\w-]*):\s*(.*)$/u.exec(lines[index] ?? "");
     if (!match) continue;
     const key = (match[1] ?? "").toLocaleLowerCase("en-US");
     const value = (match[2] ?? "").trim().replace(/^['"]|['"]$/gu, "");
     if (key === "name" && value) metadata.name = value;
     if ((key === "description" || key === "summary") && value) metadata.description = value;
-    if (key === "tags" || key === "keywords") metadata.tags.push(...stringList(value));
+    if (key === "tags" || key === "keywords") {
+      if (value) {
+        metadata.tags.push(...stringList(value));
+      } else {
+        // Empty inline value: consume a following YAML block list
+        //   tags:
+        //     - security
+        //     - "review"
+        // Only simple scalar items are accepted; a nested/mapping item
+        // (e.g. "- foo: bar") ends the list rather than recursing.
+        const items: string[] = [];
+        while (index + 1 < lines.length && items.length < MAX_LIST_ITEMS) {
+          const item = /^\s+-\s+(.*)$/u.exec(lines[index + 1] ?? "");
+          if (!item) break;
+          const scalar = (item[1] ?? "").trim().replace(/^['"]|['"]$/gu, "");
+          if (scalar === "" || scalar.includes(":")) break;
+          items.push(scalar);
+          index += 1;
+        }
+        metadata.tags.push(...items);
+      }
+    }
   }
-  metadata.tags = uniqueSorted(metadata.tags);
+  metadata.tags = uniqueSorted(metadata.tags).slice(0, MAX_LIST_ITEMS);
   return { metadata, body: normalized.slice(end + 5) };
 }
 
